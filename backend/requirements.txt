@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+mysql-connector-python  # ספריית חיבור ישיר ל-MySQL
+redis                   # ספריית חיבור ל-Redis
+pydantic

@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+
+  # 1. שירות בסיס הנתונים (MySQL)
+  db:
+    image: mysql:8.0
+    container_name: my_workbench_mysql
+    restart: always
+    environment:
+      # משתמש root וסיסמה לגישה (כפי שהגדרנו ל-Workbench)
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: student_db
+    ports:
+      # חשיפת פורט 3307 למחשב המארח כדי שתוכל להתחבר מ-Workbench
+      - "3307:3306"
+    volumes:
+      # ווליום לשמירה קבועה של הנתונים, גם לאחר כיבוי והדלקה
+      - db_data:/var/lib/mysql
+
+  # 2. שירות מטמון (Redis)
+  redis:
+    image: redis:latest
+    container_name: minimal_redis_cache
+    restart: always
+    ports:
+      # חשיפת פורט 6379 למחשב המארח
+      - "6379:6379"
+
+  # 3. שירות ה-Backend (FastAPI)
+  backend:
+    build: 
+      context: ./backend # בונה את התמונה מתוך ה-Dockerfile בתיקיית backend
+    container_name: minimal_fastapi_backend
+    restart: always
+    ports:
+      # חשיפת פורט 8000 למחשב המארח
+      - "8000:8000"
+    environment:
+      # חיבור לשירותי התשתית באמצעות שמות השירותים (db ו-redis) ברשת הפנימית של Compose
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: password
+      DB_NAME: student_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    # מוודא ש-DB ו-Redis עולים לפני ה-backend
+    depends_on:
+      - db
+      - redis
+
+  # 4. שירות ה-Frontend (React)
+  frontend:
+    build: 
+      context: ./frontend # בונה את התמונה מתוך ה-Dockerfile בתיקיית frontend
+    container_name: minimal_react_frontend
+    restart: always
+    ports:
+      # חשיפת פורט 3000 למחשב המארח (לגישת הדפדפן)
+      - "3000:3000"
+    depends_on:
+      - backend
+    # ה-Frontend נטען בדפדפן, ושם ה-JS מתחבר ל-localhost:8000
+
+# הגדרת הווליום לשמירת נתונים קבועה של MySQL
+volumes:
+  db_data:
